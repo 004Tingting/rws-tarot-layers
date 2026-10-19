@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RWS 拆层预览 — 14 · King of Wands</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; min-height:100vh; display:flex; flex-direction:column; align-items:center;
+         gap:24px; background:#191713; color:#e8e2d6; font:14px/1.7 system-ui,sans-serif; padding:30px; }
+  h1 { font-size:16px; font-weight:600; margin:0; letter-spacing:.04em; }
+  p.hint { margin:0; color:#a99e8a; font-size:13px; text-align:center; }
+  p.back { margin:0; font-size:13px; }
+  p.back a { color:#c9b98a; }
+  .stage { perspective: 1100px; position:relative; }
+  .card { position:relative; width:min(420px, 80vw); aspect-ratio:2100/3600;
+          transform-style:preserve-3d; touch-action:none; }
+  .card.live img { will-change: transform; }
+  .card img { position:absolute; inset:0; width:100%; height:100%;
+              -webkit-user-drag:none; user-select:none; pointer-events:none; }
+  /* 视差 = 2D 平移（幅度由滑杆定）：闲置时偏移恒为 0，序号/标题永远精确归位，
+     改深度只改动幅不改位置。牌面向后 = 与指针反向；序号/标题浮层 = 同向。 */
+  .card .artwork { transform: translate(var(--ax, 0px), var(--ay, 0px)) scale(var(--art-scale, 1.06));
+                   transform-origin: 50.1% 46.5%; }
+  .card .number  { transform: translate(var(--nx, 0px), var(--ny, 0px)); }
+  .card .title   { transform: translate(var(--tx, 0px), var(--ty, 0px)); }
+  /* rainbow 箔面：卡内单元素，color-dodge；渐变以 background-size 400% 铺装、
+     background-position 随指针扫动（pokemon-cards-css 原版模式，背景天然裁切于卡面）。
+     色标取低明度（原版靠 filter brightness 压制，本页按 GPU 红线弃 filter 改色标补偿）。 */
+  .card .foil { position:absolute; inset:0; pointer-events:none;
+                mix-blend-mode: color-dodge; opacity: var(--rainbow, .5);
+                background-image: linear-gradient(-30deg,
+      hsl(0,57%,30%), hsl(40,53%,32%), hsl(90,60%,30%), hsl(180,60%,30%),
+      hsl(180,60%,30%), hsl(210,57%,32%), hsl(280,55%,26%),
+      hsl(0,57%,30%), hsl(40,53%,32%), hsl(90,60%,30%), hsl(180,60%,30%),
+      hsl(180,60%,30%), hsl(210,57%,32%), hsl(280,55%,26%),
+      hsl(0,57%,30%), hsl(40,53%,32%), hsl(90,60%,30%), hsl(180,60%,30%),
+      hsl(180,60%,30%), hsl(210,57%,32%), hsl(280,55%,26%),
+      hsl(0,57%,30%));
+                background-size: 400% 400%;
+                background-position: var(--bx, 50%) var(--by, 50%); }
+  .card.live .foil { will-change: background-position; }
+  .panel { display:flex; gap:20px 26px; flex-wrap:wrap; justify-content:center; max-width:760px; }
+  label { display:flex; flex-direction:column; gap:2px; width:220px; font-size:13px; }
+  label span { display:flex; justify-content:space-between; }
+  output { color:#c9b98a; font-variant-numeric:tabular-nums; }
+  input[type=range] { accent-color:#c9b98a; }
+</style>
+</head>
+<body>
+  <h1>RWS 拆层预览 · 14 · King of Wands</h1>
+  <p class="hint">悬停移动指针：卡片倾斜，牌面向后、序号/标题浮层同向视差，rainbow 随指针扫动。<br>闲置时所有层精确归位；深度滑杆只改视差幅度，不改变闲置位置。</p>
+  <p class="back"><a href="../index.html">← 返回牌目录</a></p>
+  <div class="stage">
+    <div class="card" id="card">
+      <img class="artwork" src="assets/minor-arcana/wands/14-king-of-wands/artwork.png" alt="">
+      <img class="edge" src="assets/minor-arcana/wands/14-king-of-wands/edge.png" alt="">
+      <div class="foil"></div>
+      <img class="title" src="assets/minor-arcana/wands/14-king-of-wands/title.png" alt="">
+    </div>
+  </div>
+  <div class="panel">
+    <label><span>倾斜幅度 <output id="o-tilt">16°</output></span>
+      <input type="range" id="r-tilt" min="0" max="30" step="1" value="16"></label>
+    <label><span>牌面视差幅度 <output id="o-art">14px</output></span>
+      <input type="range" id="r-art" min="0" max="40" step="1" value="14"></label>
+    <label><span>牌面放大 <output id="o-scale">×1.06</output></span>
+      <input type="range" id="r-scale" min="100" max="108" step="0.5" value="106"></label>
+    <label><span>标题视差幅度 <output id="o-title">22px</output></span>
+      <input type="range" id="r-title" min="0" max="60" step="1" value="22"></label>
+    <label><span>rainbow 强度 <output id="o-rain">50%</output></span>
+      <input type="range" id="r-rain" min="0" max="100" step="1" value="50"></label>
+    <label><span>rainbow 扫幅 <output id="o-travel">100%</output></span>
+      <input type="range" id="r-travel" min="0" max="200" step="5" value="100"></label>
+  </div>
+<script>
+  const card = document.getElementById('card');
+  const stage = card.parentElement;
+  let rect = null, raf = 0;
+  let tiltMax = 16, artAmp = 14, numAmp = 16, titleAmp = 22, travel = 1;
+
+  stage.addEventListener('pointerenter', () => {
+    rect = stage.getBoundingClientRect();
+    card.classList.add('live');
+    card.style.transition = 'transform 80ms ease-out';        // 进场短过渡
+    setTimeout(() => { card.style.transition = ''; }, 90);
+  });
+  stage.addEventListener('pointermove', (e) => {              // move 期间免过渡 1:1 跟手
+    if (!rect) rect = stage.getBoundingClientRect();
+    const nx = (e.clientX - rect.left) / rect.width * 2 - 1;
+    const ny = (e.clientY - rect.top) / rect.height * 2 - 1;
+    if (!raf) raf = requestAnimationFrame(() => {
+      raf = 0;
+      card.style.transform =
+        `rotateX(${(-ny * tiltMax).toFixed(2)}deg) rotateY(${(nx * tiltMax).toFixed(2)}deg)`;
+      card.style.setProperty('--ax', (-nx * artAmp).toFixed(1) + 'px');   // 牌面反向 = 后退
+      card.style.setProperty('--ay', (-ny * artAmp).toFixed(1) + 'px');
+      card.style.setProperty('--tx', (nx * titleAmp).toFixed(1) + 'px');
+      card.style.setProperty('--ty', (ny * titleAmp).toFixed(1) + 'px');
+      card.style.setProperty('--bx', (50 + nx * 25 * travel).toFixed(1) + '%');
+      card.style.setProperty('--by', (50 + ny * 32 * travel).toFixed(1) + '%');
+    });
+  }, { passive: true });
+  stage.addEventListener('pointerleave', () => {              // 离开慢弹回正：全部归零 = 精确归位
+    rect = null;
+    card.classList.remove('live');
+    card.style.transition = 'transform .32s cubic-bezier(.2,.65,.3,1.12)';
+    card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    card.style.setProperty('--ax', '0px');
+    card.style.setProperty('--ay', '0px');
+    card.style.setProperty('--tx', '0px');
+    card.style.setProperty('--ty', '0px');
+    card.style.setProperty('--bx', '50%');
+    card.style.setProperty('--by', '50%');
+    setTimeout(() => { card.style.transition = ''; }, 340);
+  });
+
+  const bind = (rid, oid, fmt, fn) => {
+    const r = document.getElementById(rid), o = document.getElementById(oid);
+    const apply = () => { fn(+r.value); o.textContent = fmt(+r.value); };
+    r.addEventListener('input', apply);
+    apply();
+  };
+  bind('r-tilt', 'o-tilt', v => v + '°', v => { tiltMax = v; });
+  bind('r-art', 'o-art', v => v + 'px', v => { artAmp = v; });
+  bind('r-scale', 'o-scale', v => '×' + (v / 100).toFixed(2),
+       v => card.style.setProperty('--art-scale', v / 100));
+  bind('r-title', 'o-title', v => v + 'px', v => { titleAmp = v; });
+  bind('r-rain', 'o-rain', v => v + '%', v => card.style.setProperty('--rainbow', v / 100));
+  bind('r-travel', 'o-travel', v => v + '%', v => { travel = v / 100; });
+</script>
+</body>
+</html>
