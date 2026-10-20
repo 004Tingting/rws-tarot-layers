@@ -100,6 +100,13 @@ python scripts/gen_preview.py --out preview --webp  # webp 自包含（本仓库
 ```
 ├── preview/                  # 78 个逐牌交互页 + index.html（webp 自包含）
 │   └── assets/               # webp 分层缩图（~12MB）
+├── react/                    # ★ React 组件包（下游产物，见下节）
+│   ├── src/TarotCard.tsx     # <TarotCard cardId="major-0" /> 单文件组件
+│   ├── assets/               # 480px 分层 + 240px 缩略图（11.24MB / 333 文件）
+│   ├── scripts/sync-assets.mjs   # 从任意 tarot 素材目录同步进 assets/
+│   ├── .demo/                # Vite 演示工程（含 CDP 验证脚本）
+│   ├── demo.html             # 演示入口（8 张卡，覆盖三种层构成）
+│   └── README.md             # 组件用法 / 调参 / 兼容性 / 已知限制
 ├── scripts/
 │   ├── download_from_commons.py   # 从 Commons 枚举+下载+校验原牌面（串行/断点续传/限流退避）
 │   ├── process_cards.py           # 版式检测 + 拆层 + 重组校验（analyze/boxes/split/split-minors/proof）
@@ -108,6 +115,28 @@ python scripts/gen_preview.py --out preview --webp  # webp 自包含（本仓库
 ├── LICENSE                   # 代码许可（MIT）
 └── CHANGELOG.md
 ```
+
+## React 组件包（`react/`）
+
+`preview/` 是**看效果**的静态页；`react/` 是**拿去用**的组件。
+同一个拆层产物，两种消费方式。
+
+```tsx
+import { TarotCard } from "rws-tarot-card";
+
+<TarotCard cardId="major-0" basePath="/tarot" label="愚者" />
+```
+
+- **零依赖**：只用 React 18/19 + 原生 DOM API，无动画库、无 Canvas/WebGL
+- **素材内置**：78 张 × 5 层（分层 480px + 拍平缩略图 240px），11.24 MB，装上即用
+- **渐进加载**：先出整体牌面（`thumb.webp` ≈29 KB），`artwork`+`edge` 预加载完成才切分层并挂 rainbow
+- **失败降级**：分层加载失败 → 停在整体牌面，**不显示 rainbow**（半套层叠彩虹很难看）
+- **缺层自适应**：数字牌无 `title`、5 张缺 `number`，组件自动不渲染对应层
+
+完整用法、调参、验证结果见 [`react/README.md`](react/README.md)。
+
+> 480px 的取舍：卡片实际显示 ≤208px，2×DPR 需 416px。再往上 600px 到 159 KB/张、
+> 720px 到 216 KB/张，收益不抵体积。印刷/大屏请用 Releases 里的全分辨率分层。
 
 ## 许可
 
@@ -121,6 +150,7 @@ python scripts/gen_preview.py --out preview --webp  # webp 自包含（本仓库
 - [ ] 牌背拆层
 - [ ] 修补算法升级（纹理合成）
 - [ ] 英文版 README
+- [x] React 组件包（2026-10-21）
 
 ---
 

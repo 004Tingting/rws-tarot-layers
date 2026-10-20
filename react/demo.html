@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rws-tarot-card · React 组件演示</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 32px; background: #191713; color: #e8e2d6;
+    font: 14px/1.7 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  h1 { font-size: 17px; margin: 0 0 6px; }
+  .hint { color: #a99e8a; font-size: 13px; margin: 0 0 24px; max-width: 720px; }
+  .grid {
+    display: grid; gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .cell { display: flex; flex-direction: column; gap: 8px; }
+  .cell p { margin: 0; font-size: 12px; color: #a99e8a; text-align: center; }
+  .note { margin-top: 28px; font-size: 13px; color: #a99e8a; max-width: 720px; }
+  code { background: #241f19; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>rws-tarot-card · React 组件演示</h1>
+  <p class="hint">
+    悬停任意一张牌：卡片倾斜、牌面向后视差、序号/牌名浮层同向视差、rainbow 箔面随指针扫动；
+    指针离开后弹性回正，所有层精确归位。
+  </p>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="note">
+    加载顺序：先出整体牌面（<code>thumb.webp</code>，约 29KB），
+    <code>artwork</code> + <code>edge</code> 预加载完成后才切到分层视图并挂 rainbow；
+    若资源加载失败，会一直停在整体牌面、不显示 rainbow。
+    <br>
+    缺层是正常的：数字牌 2–10 牌面没有牌名带（无 <code>title</code> 层），
+    The Moon / The Sun / Four of Cups / Three of Pentacles / Five of Pentacles 缺 <code>number</code> 层。
+  </p>
+
+  <script type="module" src="./.demo/main.tsx"></script>
+</body>
+</html>

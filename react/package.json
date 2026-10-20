@@ -1,0 +1,32 @@
+{
+  "name": "rws-tarot-card",
+  "version": "1.0.0",
+  "description": "React 3D tarot card with layered parallax and rainbow foil — 78 Rider-Waite-Smith cards, 480px WebP assets included",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/TarotCard.tsx",
+  "types": "./src/TarotCard.tsx",
+  "files": [
+    "src",
+    "assets",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "keywords": [
+    "tarot",
+    "react",
+    "card",
+    "parallax",
+    "3d",
+    "rider-waite-smith",
+    "rainbow-foil"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "scripts": {
+    "sync-assets": "node scripts/sync-assets.mjs"
+  }
+}
